@@ -18,7 +18,7 @@ func main() {
 				Usage:  "send server",
 				Action: send,
 				Flags: []cli.Flag{
-					&cli.StringFlag{Name: "ip", Usage: "输入目标地址", Value: defaultAddr},
+					&cli.StringFlag{Name: "ip", Usage: "Enter target address", Value: defaultAddr},
 				},
 			},
 			{

@@ -12,6 +12,10 @@ import (
 	"strings"
 )
 
+const (
+	DefaultRecvBufSize = 4 << 10 // 4k
+)
+
 type Send struct {
 	addr   string
 	paths  []string
@@ -37,7 +41,7 @@ func send(context *cli.Context) (err error) {
 
 	sender.conn, err = net.Dial("tcp", sender.addr)
 	if err != nil {
-		sender.logf("net dial err: ", err)
+		sender.logf("net dial err: %v", err)
 		return
 	}
 	defer sender.conn.Close()
@@ -91,26 +95,21 @@ func inputFilePath() (path []string, err error) {
 func (s *Send) ack() (ok bool, err error) {
 	info, err := os.Stat(s.paths[0])
 	if err != nil {
-		s.logf("os stat err: ", err)
+		s.logf("os stat err: %v", err)
 		return
 	}
 
-	data, _ := server.Encode("ack" + info.Name())
+	data := server.Encode("ack" + info.Name())
 	_, err = s.conn.Write(data)
 	if err != nil {
-		s.logf("conn.Write info.Name err: ", err)
+		s.logf("conn.Write info.Name err: %v", err)
 		return
 	}
 
-	var n int
-	buf := make([]byte, 1024)
 	s.log("waiting for ack···")
-	n, err = s.conn.Read(buf)
-	if err != nil {
-		s.logf("conn read ok err: ", err)
-		return
-	}
-	if "ok" == string(buf[:n]) {
+	reader := bufio.NewReader(s.conn)
+	res, err := server.Decode(reader)
+	if res == "ok" {
 		s.log("ack success")
 		return true, nil
 	}
@@ -120,19 +119,19 @@ func (s *Send) ack() (ok bool, err error) {
 func (s *Send) sendFile(path string) {
 	file, err := os.Open(path)
 	if err != nil {
-		s.logf("os open err: ", err)
+		s.logf("os open err: %v", err)
 		return
 	}
 	defer file.Close()
-	buf := make([]byte, 1024*4)
 
+	buf := make([]byte, DefaultRecvBufSize)
 	for {
 		n, err := file.Read(buf)
 		if err != nil {
 			if err == io.EOF {
 				s.log("files send success")
 			} else {
-				s.logf("file read err: ", err)
+				s.logf("file read err: %v", err)
 			}
 			return
 		}
@@ -140,7 +139,7 @@ func (s *Send) sendFile(path string) {
 			fmt.Println("files send success!!!")
 			break
 		}
-		data, _ := server.Encode(string(buf[:n]))
+		data := server.Encode(string(buf[:n]))
 		s.conn.Write(data)
 	}
 }

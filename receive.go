@@ -6,10 +6,9 @@ import (
 	"github.com/urfave/cli/v2"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 )
-
-var FileName string
 
 func receive(context *cli.Context) (err error) {
 	s := server.NewServer("0.0.0.0", 1234)
@@ -19,13 +18,14 @@ func receive(context *cli.Context) (err error) {
 
 	s.OnMessage(func(c *server.Client, msg string) {
 		if strings.Index(msg, "ack") == 0 {
-			err := c.SendBytes([]byte("ok"))
+			err := c.Send("ok")
 			if err != nil {
 				return
 			}
-			FileName = "r-" + msg[3:]
+			c.ExtraMap["filename"] = msg[3:]
+			return
 		}
-		saveFile(msg)
+		saveFile(c, msg)
 	})
 
 	s.OnClose(func(c *server.Client, err error) {
@@ -36,12 +36,22 @@ func receive(context *cli.Context) (err error) {
 	return
 }
 
-func saveFile(msg string) {
-	// 路径穿越检验
-	if strings.Contains(FileName, "..") {
+func saveFile(c *server.Client, msg string) {
+	fileName, ok := c.ExtraMap["filename"]
+	if !ok {
+		fmt.Printf("filename  not exists: %v\n", c.GetClientIP())
 		return
 	}
-	file, err := os.Create(FileName)
+	if fileExists(fileName) {
+		suffix := filepath.Ext(fileName)
+		prefix := strings.TrimSuffix(fileName, suffix)
+		fileName = fmt.Sprintf("%s(f2f)%s", prefix, suffix)
+	}
+	if strings.Contains(fileName, "..") {
+		return
+	}
+
+	file, err := os.Create(fileName)
 	if err != nil {
 		log.Fatalln("create file err: ", err)
 		return
@@ -51,7 +61,7 @@ func saveFile(msg string) {
 	file.Write([]byte(msg))
 }
 
-func checkIllegal(cmdName string) bool {
+func checkIllegal(cmdName string) (err bool) {
 	if strings.Contains(cmdName, "&") || strings.Contains(cmdName, "|") ||
 		strings.Contains(cmdName, ";") || strings.Contains(cmdName, "$") ||
 		strings.Contains(cmdName, "'") || strings.Contains(cmdName, "`") ||
@@ -59,5 +69,5 @@ func checkIllegal(cmdName string) bool {
 		strings.Contains(cmdName, "\"") {
 		return true
 	}
-	return false
+	return
 }
