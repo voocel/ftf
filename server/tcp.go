@@ -21,8 +21,8 @@ type Server struct {
 }
 
 // NewServer creates a new tcp server connection using the given net connection.
-func NewServer(ip string, port int32) *Server {
-	return &Server{
+func NewServer(ip string, port int32, opts ...Options) *Server {
+	serv :=  &Server{
 		ip:        ip,
 		port:      port,
 		onConnect: func(c *Client) {},
@@ -30,6 +30,10 @@ func NewServer(ip string, port int32) *Server {
 		onClose:   func(c *Client, err error) {},
 		logger:    log.New(os.Stderr, "【F2F】", log.LstdFlags),
 	}
+	for _, opt := range opts {
+		opt(serv)
+	}
+	return serv
 }
 
 func (s *Server) log(format string, v ...interface{}) {
