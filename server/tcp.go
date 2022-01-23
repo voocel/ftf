@@ -28,7 +28,7 @@ func NewServer(ip string, port int32, opts ...Options) *Server {
 		onConnect: func(c *Client) {},
 		onMessage: func(c *Client, msg string) {},
 		onClose:   func(c *Client, err error) {},
-		logger:    log.New(os.Stderr, "【F2F】", log.LstdFlags),
+		logger:    log.New(os.Stderr, "【FTF】", log.LstdFlags),
 	}
 	for _, opt := range opts {
 		opt(serv)

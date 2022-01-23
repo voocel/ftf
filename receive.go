@@ -1,8 +1,8 @@
 package main
 
 import (
-	"f2f/server"
 	"fmt"
+	"ftf/server"
 	"github.com/urfave/cli/v2"
 	"log"
 	"os"
@@ -45,7 +45,7 @@ func saveFile(c *server.Client, msg string) {
 	if fileExists(fileName) {
 		suffix := filepath.Ext(fileName)
 		prefix := strings.TrimSuffix(fileName, suffix)
-		fileName = fmt.Sprintf("%s(f2f)%s", prefix, suffix)
+		fileName = fmt.Sprintf("%s(FTF)%s", prefix, suffix)
 	}
 	if strings.Contains(fileName, "..") {
 		return

@@ -2,8 +2,8 @@ package main
 
 import (
 	"bufio"
-	"f2f/server"
 	"fmt"
+	"ftf/server"
 	"github.com/urfave/cli/v2"
 	"io"
 	"log"
@@ -81,7 +81,7 @@ func inputFilePath() (path []string, err error) {
 
 	if p == "" {
 		var f []byte
-		f, err = os.ReadFile("./f2f.conf")
+		f, err = os.ReadFile("./ftf.conf")
 		if err != nil {
 			return
 		}
@@ -146,14 +146,14 @@ func (s *Send) sendFile(path string) {
 
 func (s *Send) log(v ...interface{}) {
 	if s.logger == nil {
-		s.logger = log.New(os.Stderr, "【F2F】", log.LstdFlags)
+		s.logger = log.New(os.Stderr, "【FTF】", log.LstdFlags)
 	}
 	s.logger.Print(v...)
 }
 
 func (s *Send) logf(format string, v ...interface{}) {
 	if s.logger == nil {
-		s.logger = log.New(os.Stderr, "【F2F】", log.LstdFlags)
+		s.logger = log.New(os.Stderr, "【FTF】", log.LstdFlags)
 	}
 	s.logger.Printf(format, v...)
 }

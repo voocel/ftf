@@ -1,4 +1,4 @@
-module f2f
+module ftf
 
 go 1.17
 
