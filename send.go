@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"f2f/server"
 	"fmt"
 	"github.com/urfave/cli/v2"
 	"io"
@@ -18,12 +19,12 @@ type Send struct {
 	logger *log.Logger
 }
 
-func send(c *cli.Context) (err error) {
+func send(context *cli.Context) (err error) {
 	var sender = Send{
 		addr: defaultAddr,
 	}
 
-	if c.String("ip") != defaultAddr {
+	if context.String("ip") != defaultAddr {
 		sender.addr, err = inputAddr()
 		if err != nil {
 			return
@@ -94,7 +95,8 @@ func (s *Send) ack() (ok bool, err error) {
 		return
 	}
 
-	_, err = s.conn.Write([]byte(info.Name()))
+	data, _ := server.Encode("ack" + info.Name())
+	_, err = s.conn.Write(data)
 	if err != nil {
 		s.logf("conn.Write info.Name err: ", err)
 		return
@@ -102,7 +104,7 @@ func (s *Send) ack() (ok bool, err error) {
 
 	var n int
 	buf := make([]byte, 1024)
-	s.log("waiting ack···")
+	s.log("waiting for ack···")
 	n, err = s.conn.Read(buf)
 	if err != nil {
 		s.logf("conn read ok err: ", err)
@@ -138,7 +140,8 @@ func (s *Send) sendFile(path string) {
 			fmt.Println("files send success!!!")
 			break
 		}
-		s.conn.Write(buf[:n])
+		data, _ := server.Encode(string(buf[:n]))
+		s.conn.Write(data)
 	}
 }
 
