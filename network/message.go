@@ -1,4 +1,4 @@
-package server
+package network
 
 import (
 	"bytes"
@@ -8,18 +8,26 @@ import (
 )
 
 type Message struct {
-	size     int32
-	id       int32
+	cmd      CMD
+	size     uint32
 	data     []byte
 	checksum uint32
 }
 
-func NewMessage(msgId int32, data []byte) *Message {
+type CMD uint16
+
+const (
+	Heartbeat CMD = iota
+	Ack
+	Single
+	All
+)
+
+func NewMessage(cmd CMD, data []byte) *Message {
 	msg := &Message{
-		size:     int32(len(data)) + 4 + 4,
-		id:       msgId,
-		data:     data,
-		checksum: 0,
+		cmd:  cmd,
+		size: uint32(len(data)),
+		data: data,
 	}
 	msg.checksum = msg.calc()
 	return msg
@@ -29,11 +37,11 @@ func (m *Message) GetData() []byte {
 	return m.data
 }
 
-func (m *Message) GetId() int32 {
-	return m.id
+func (m *Message) GetCmd() CMD {
+	return m.cmd
 }
 
-func (m *Message) GetSize() int32 {
+func (m *Message) GetSize() uint32 {
 	return m.size
 }
 
@@ -47,7 +55,7 @@ func (m *Message) calc() (checksum uint32) {
 	}
 
 	data := new(bytes.Buffer)
-	err := binary.Write(data, binary.LittleEndian, m.id)
+	err := binary.Write(data, binary.LittleEndian, m.cmd)
 	if err != nil {
 		return
 	}
@@ -55,10 +63,11 @@ func (m *Message) calc() (checksum uint32) {
 	if err != nil {
 		return
 	}
+
 	checksum = adler32.Checksum(data.Bytes())
 	return
 }
 
 func (m *Message) String() string {
-	return fmt.Sprintf("Size=%d ID=%d DataLen=%d Checksum=%d", m.GetSize(), m.GetId(), len(m.GetData()), m.checksum)
+	return fmt.Sprintf("{cmd:%d, size:%d, data:%v, checksum:%d}", m.GetCmd(), m.GetSize(), string(m.GetData()), m.checksum)
 }

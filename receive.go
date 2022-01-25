@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"ftf/server"
+	"ftf/network"
 	"github.com/urfave/cli/v2"
 	"log"
 	"os"
@@ -10,25 +10,23 @@ import (
 	"strings"
 )
 
-func receive(context *cli.Context) (err error) {
-	s := server.NewServer("0.0.0.0", 1234)
-	s.OnConnect(func(c *server.Client) {
+func receive(ctx *cli.Context) (err error) {
+	s := network.NewServer("0.0.0.0", 1234)
+	s.OnConnect(func(c *network.Client) {
 		fmt.Printf("connect by: %v\n", c.GetClientIP())
 	})
 
-	s.OnMessage(func(c *server.Client, msg string) {
-		if strings.Index(msg, "ack") == 0 {
-			err := c.Send("ok")
-			if err != nil {
-				return
-			}
-			c.ExtraMap["filename"] = msg[3:]
+	s.OnMessage(func(c *network.Client, msg *network.Message) {
+		if msg.GetCmd() == network.Ack {
+			msg := network.NewMessage(network.Ack, []byte("ok"))
+			c.SendMessage(msg)
+			c.ExtraMap["filename"] = string(msg.GetData())
 			return
 		}
 		saveFile(c, msg)
 	})
 
-	s.OnClose(func(c *server.Client, err error) {
+	s.OnClose(func(c *network.Client, err error) {
 		fmt.Printf("closed by: %v\n", c.GetClientIP())
 	})
 
@@ -36,7 +34,7 @@ func receive(context *cli.Context) (err error) {
 	return
 }
 
-func saveFile(c *server.Client, msg string) {
+func saveFile(c *network.Client, msg *network.Message) {
 	fileName, ok := c.ExtraMap["filename"]
 	if !ok {
 		fmt.Printf("filename  not exists: %v\n", c.GetClientIP())
@@ -58,7 +56,7 @@ func saveFile(c *server.Client, msg string) {
 	}
 	defer file.Close()
 
-	file.Write([]byte(msg))
+	file.Write(msg.GetData())
 }
 
 func checkIllegal(cmdName string) (err bool) {

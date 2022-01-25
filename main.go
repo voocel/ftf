@@ -15,7 +15,7 @@ func main() {
 		Commands: []*cli.Command{
 			{
 				Name:   "send",
-				Usage:  "send server",
+				Usage:  "send network",
 				Action: send,
 				Flags: []cli.Flag{
 					&cli.StringFlag{Name: "ip", Usage: "Enter target address", Value: defaultAddr},
@@ -23,7 +23,7 @@ func main() {
 			},
 			{
 				Name:   "receive",
-				Usage:  "receive server",
+				Usage:  "receive network",
 				Action: receive,
 			},
 		},
