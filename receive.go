@@ -11,16 +11,15 @@ import (
 )
 
 func receive(ctx *cli.Context) (err error) {
-	s := network.NewServer("0.0.0.0", 1234)
+	s := network.NewServer("0.0.0.0:1234")
 	s.OnConnect(func(c *network.Client) {
-		fmt.Printf("connect by: %v\n", c.GetClientIP())
+		fmt.Printf("connected by: %v\n", c.GetClientIP())
 	})
 
 	s.OnMessage(func(c *network.Client, msg *network.Message) {
 		if msg.GetCmd() == network.Ack {
-			msg := network.NewMessage(network.Ack, []byte("ok"))
-			c.SendMessage(msg)
-			c.ExtraMap["filename"] = string(msg.GetData())
+			c.SendBytes(network.Ack, []byte("ok"))
+			c.SetExtraMap("filename", string(msg.GetData()))
 			return
 		}
 		saveFile(c, msg)
@@ -35,11 +34,7 @@ func receive(ctx *cli.Context) (err error) {
 }
 
 func saveFile(c *network.Client, msg *network.Message) {
-	fileName, ok := c.ExtraMap["filename"]
-	if !ok {
-		fmt.Printf("filename  not exists: %v\n", c.GetClientIP())
-		return
-	}
+	fileName := c.GetExtraMap("filename")
 	if fileExists(fileName) {
 		suffix := filepath.Ext(fileName)
 		prefix := strings.TrimSuffix(fileName, suffix)
@@ -51,7 +46,7 @@ func saveFile(c *network.Client, msg *network.Message) {
 
 	file, err := os.Create(fileName)
 	if err != nil {
-		log.Fatalln("create file err: ", err)
+		log.Printf("create file[%s] err: %v", fileName, err)
 		return
 	}
 	defer file.Close()

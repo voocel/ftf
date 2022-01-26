@@ -6,6 +6,7 @@ import (
 	"ftf/network"
 	"github.com/urfave/cli/v2"
 	"io"
+	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -17,15 +18,17 @@ const (
 )
 
 type Send struct {
-	addr   string
-	paths  []string
-	conn   net.Conn
-	logger *log.Logger
+	addr     string
+	paths    []string
+	conn     net.Conn
+	logger   *log.Logger
+	protocol network.Protocol
 }
 
 func send(ctx *cli.Context) (err error) {
-	var sender = Send{
-		addr: defaultAddr,
+	var sender = &Send{
+		addr:     defaultAddr,
+		protocol: network.NewDefaultProtocol(),
 	}
 
 	if ctx.String("ip") != defaultAddr {
@@ -77,11 +80,11 @@ func inputFilePath() (path []string, err error) {
 		err = fmt.Errorf("input params error: %v", err)
 		return
 	}
-	p = strings.TrimSuffix(p, "\n")
 
+	p = strings.TrimSuffix(p, "\n")
 	if p == "" {
 		var f []byte
-		f, err = os.ReadFile("./ftf.conf")
+		f, err = ioutil.ReadFile("./ftf.conf")
 		if err != nil {
 			return
 		}
@@ -100,8 +103,7 @@ func (s *Send) ack() (ok bool, err error) {
 	}
 
 	data := network.NewMessage(network.Ack, []byte(info.Name()))
-	p := network.NewDefaultProtocol()
-	msg, err := p.Pack(data)
+	msg, err := s.protocol.Pack(data)
 	if err != nil {
 		s.logf("ack packet err: %v", err)
 		return
@@ -114,7 +116,7 @@ func (s *Send) ack() (ok bool, err error) {
 
 	s.log("waiting for ack···")
 	reader := bufio.NewReader(s.conn)
-	res, err := p.Unpack(reader)
+	res, err := s.protocol.Unpack(reader)
 	if err != nil {
 		s.logf("receive ack err: %v", err)
 		return
@@ -134,7 +136,6 @@ func (s *Send) sendFile(path string) {
 	}
 	defer file.Close()
 
-	p := network.NewDefaultProtocol()
 	buf := make([]byte, DefaultRecvBufSize)
 	for {
 		n, err := file.Read(buf)
@@ -151,7 +152,7 @@ func (s *Send) sendFile(path string) {
 			break
 		}
 		msg := network.NewMessage(network.Single, buf[:n])
-		b, err := p.Pack(msg)
+		b, err := s.protocol.Pack(msg)
 		if err != nil {
 			s.logf("send file message err: %v", err)
 			return

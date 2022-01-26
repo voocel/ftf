@@ -10,4 +10,3 @@ func (c *PBCodec) Encode(v interface{}) ([]byte, error) {
 func (c *PBCodec) Decode(data []byte, v interface{}) error {
 	panic("implement me")
 }
-
