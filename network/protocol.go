@@ -7,6 +7,7 @@ import (
 	"io"
 )
 
+// Won't compile if Protocol can't be realized by a DefaultProtocol
 var _ Protocol = &DefaultProtocol{}
 
 type Protocol interface {

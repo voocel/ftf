@@ -1,11 +1,41 @@
 package network
 
-import "crypto/tls"
+import (
+	"crypto/tls"
+	"time"
+)
 
-type Options func(s *Server)
+type Options struct {
+	logger    Logger
+	tlsConf   *tls.Config
+	heartbeat time.Duration
+}
 
-func WithTLS(tls *tls.Config) Options {
-	return func(s *Server) {
-		s.tlsConf = tls
+type Option func(o *Options)
+
+func defaultOptions() *Options {
+	return &Options{
+		logger:    newLogger(),
+		tlsConf:   nil,
+		heartbeat: 0,
+	}
+}
+
+func WithTLS(tls *tls.Config) Option {
+	return func(o *Options) {
+		o.tlsConf = tls
+	}
+}
+
+func WithHeartbeat(t time.Duration) Option {
+	return func(o *Options) {
+		o.heartbeat = t
+	}
+}
+
+func WithLogger(log Logger) Option {
+	return func(o *Options) {
+		o.logger = log
+		SetLogger(log)
 	}
 }

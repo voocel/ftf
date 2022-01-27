@@ -3,10 +3,7 @@ package network
 import (
 	"bufio"
 	"context"
-	"crypto/tls"
-	"log"
 	"net"
-	"os"
 	"sync"
 	"time"
 )
@@ -14,8 +11,7 @@ import (
 // Server defines parameters for running an TCP network
 type Server struct {
 	addr      string
-	logger    *log.Logger
-	tlsConf   *tls.Config
+	opt       *Options
 	exitCh    chan struct{}
 	onConnect func(c *Client)
 	onMessage func(c *Client, msg *Message)
@@ -23,23 +19,21 @@ type Server struct {
 }
 
 // NewServer creates a new tcp network connection using the given net connection.
-func NewServer(addr string, opts ...Options) *Server {
+func NewServer(addr string, opts ...Option) *Server {
 	serv := &Server{
 		addr:      addr,
 		exitCh:    make(chan struct{}),
 		onConnect: func(c *Client) {},
 		onMessage: func(c *Client, msg *Message) {},
 		onClose:   func(c *Client, err error) {},
-		logger:    log.New(os.Stderr, "【FTF】", log.LstdFlags),
 	}
-	for _, opt := range opts {
-		opt(serv)
-	}
-	return serv
-}
 
-func (s *Server) log(format string, v ...interface{}) {
-	s.logger.Printf(format, v...)
+	d := defaultOptions()
+	for _, opt := range opts {
+		opt(d)
+	}
+	serv.opt = d
+	return serv
 }
 
 // Start create a TCP network listener to accept client connection
@@ -49,7 +43,8 @@ func (s *Server) Start() {
 		panic(err)
 	}
 	defer listener.Close()
-	s.log("network start success! ", s.addr)
+
+	Flog.Infof("TCP server start success! %v", s.addr)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -63,19 +58,19 @@ func (s *Server) Start() {
 
 		conn, err := listener.Accept()
 		if err != nil {
-			s.log("accept connection err: %v", err)
+			Flog.Errorf("accept connection err: %v", err)
 			continue
 		}
 		c := Client{
 			srv:      s,
 			conn:     conn,
-			timer:    time.NewTimer(5 * time.Second),
+			timer:    time.NewTimer(2 * time.Second),
 			clientIP: conn.RemoteAddr(),
 			protocol: NewDefaultProtocol(),
 			msgCh:    make(chan *Message, 1024),
 			sendCh:   make(chan *Message, 1024),
 			errDone:  make(chan error),
-			extraMap: map[string]string{},
+			extraMap: map[string]interface{}{},
 		}
 		go c.process(ctx)
 	}
@@ -113,7 +108,7 @@ type Client struct {
 	sendCh   chan *Message
 	msgCh    chan *Message
 	errDone  chan error
-	extraMap map[string]string
+	extraMap map[string]interface{}
 	sync.RWMutex
 }
 
@@ -155,7 +150,7 @@ func (c *Client) readLoop(ctx context.Context) {
 			msg, err := c.protocol.Unpack(reader)
 			if err != nil {
 				c.errDone <- err
-				continue
+				return
 			}
 			c.msgCh <- msg
 		}
@@ -172,7 +167,7 @@ func (c *Client) writeLoop(ctx context.Context) {
 			return
 		case msg := <-c.sendCh:
 			if err := c.writeMessage(msg); err != nil {
-				log.Printf("send message err: %v", err)
+				Flog.Errorf("send message err: %v", err)
 			}
 		case <-c.timer.C:
 			c.SendBytes(Heartbeat, []byte("ping"))
@@ -208,14 +203,14 @@ func (c *Client) GetRawConn() net.Conn {
 }
 
 // SetExtraMap set the extra data
-func (c *Client) SetExtraMap(k, v string) {
+func (c *Client) SetExtraMap(k string, v interface{}) {
 	c.Lock()
 	defer c.Unlock()
 	c.extraMap[k] = v
 }
 
 // GetExtraMap get the extra data
-func (c *Client) GetExtraMap(k string) string {
+func (c *Client) GetExtraMap(k string) interface{} {
 	c.RLock()
 	defer c.RUnlock()
 	return c.extraMap[k]

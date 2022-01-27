@@ -3,17 +3,25 @@ package main
 import (
 	"fmt"
 	"ftf/network"
+	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
+var flog network.Logger
+
+func init() {
+	l := logrus.New()
+	l.SetLevel(logrus.DebugLevel)
+	flog = l
+}
+
 func receive(ctx *cli.Context) (err error) {
-	s := network.NewServer("0.0.0.0:1234")
+	s := network.NewServer("0.0.0.0:1234", network.WithLogger(flog))
 	s.OnConnect(func(c *network.Client) {
-		fmt.Printf("connected by: %v\n", c.GetClientIP())
+		flog.Infof("connected by: %v\n", c.GetClientIP())
 	})
 
 	s.OnMessage(func(c *network.Client, msg *network.Message) {
@@ -26,7 +34,7 @@ func receive(ctx *cli.Context) (err error) {
 	})
 
 	s.OnClose(func(c *network.Client, err error) {
-		fmt.Printf("closed by: %v\n", c.GetClientIP())
+		flog.Infof("closed by[%v]: %v\n", c.GetClientIP(), err)
 	})
 
 	s.Start()
@@ -34,7 +42,7 @@ func receive(ctx *cli.Context) (err error) {
 }
 
 func saveFile(c *network.Client, msg *network.Message) {
-	fileName := c.GetExtraMap("filename")
+	fileName := c.GetExtraMap("filename").(string)
 	if fileExists(fileName) {
 		suffix := filepath.Ext(fileName)
 		prefix := strings.TrimSuffix(fileName, suffix)
@@ -46,7 +54,7 @@ func saveFile(c *network.Client, msg *network.Message) {
 
 	file, err := os.Create(fileName)
 	if err != nil {
-		log.Printf("create file[%s] err: %v", fileName, err)
+		flog.Errorf("create file[%s] err: %v", fileName, err)
 		return
 	}
 	defer file.Close()
