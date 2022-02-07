@@ -3,14 +3,15 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"ftf/network"
-	"github.com/urfave/cli/v2"
 	"io"
 	"io/ioutil"
 	"log"
 	"net"
 	"os"
 	"strings"
+
+	"github.com/urfave/cli/v2"
+	"github.com/voocel/ftf/network"
 )
 
 const (

@@ -1,4 +1,4 @@
-module ftf
+module github.com/voocel/ftf
 
 go 1.17
 

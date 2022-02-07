@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
-	"ftf/network"
-	"github.com/sirupsen/logrus"
-	"github.com/urfave/cli/v2"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/sirupsen/logrus"
+	"github.com/urfave/cli/v2"
+	"github.com/voocel/ftf/network"
 )
 
 var flog network.Logger
