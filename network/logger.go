@@ -7,7 +7,7 @@ import (
 )
 
 // Won't compile if Logger can't be realized by a DefaultLogger
-var _ Logger = &DefaultLogger{}
+var _ Logger = (*DefaultLogger)(nil)
 
 var Flog Logger = newLogger()
 

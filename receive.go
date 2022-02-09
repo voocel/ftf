@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -60,7 +63,9 @@ func saveFile(c *network.Client, msg *network.Message) {
 	}
 	defer file.Close()
 
-	file.Write(msg.GetData())
+	w := bufio.NewWriter(file)
+	io.Copy(w, bytes.NewReader(msg.GetData()))
+	w.Flush()
 }
 
 func checkIllegal(cmdName string) (err bool) {

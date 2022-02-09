@@ -44,7 +44,7 @@ func (s *Server) Start() {
 	}
 	defer listener.Close()
 
-	Flog.Infof("TCP server start success! %v", s.addr)
+	Flog.Infof("TCP server start successfully! %v", s.addr)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

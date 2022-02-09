@@ -12,6 +12,7 @@ const (
 
 func main() {
 	app := &cli.App{
+		CustomAppHelpTemplate: Summary(),
 		Commands: []*cli.Command{
 			{
 				Name:   "send",
