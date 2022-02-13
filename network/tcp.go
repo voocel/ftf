@@ -13,9 +13,9 @@ type Server struct {
 	addr      string
 	opt       *Options
 	exitCh    chan struct{}
-	onConnect func(c *Client)
-	onMessage func(c *Client, msg *Message)
-	onClose   func(c *Client, err error)
+	onConnect func(c *Conn)
+	onMessage func(c *Conn, msg *Message)
+	onClose   func(c *Conn, err error)
 }
 
 // NewServer creates a new tcp network connection using the given net connection.
@@ -23,9 +23,9 @@ func NewServer(addr string, opts ...Option) *Server {
 	serv := &Server{
 		addr:      addr,
 		exitCh:    make(chan struct{}),
-		onConnect: func(c *Client) {},
-		onMessage: func(c *Client, msg *Message) {},
-		onClose:   func(c *Client, err error) {},
+		onConnect: func(c *Conn) {},
+		onMessage: func(c *Conn, msg *Message) {},
+		onClose:   func(c *Conn, err error) {},
 	}
 
 	d := defaultOptions()
@@ -61,7 +61,7 @@ func (s *Server) Start() {
 			Flog.Errorf("accept connection err: %v", err)
 			continue
 		}
-		c := Client{
+		c := Conn{
 			srv:      s,
 			conn:     conn,
 			timer:    time.NewTimer(2 * time.Second),
@@ -82,22 +82,22 @@ func (s *Server) Stop() {
 }
 
 // OnConnect connect callbacks on a connection
-func (s *Server) OnConnect(callback func(c *Client)) {
+func (s *Server) OnConnect(callback func(c *Conn)) {
 	s.onConnect = callback
 }
 
 // OnMessage receive callbacks on a connection
-func (s *Server) OnMessage(callback func(c *Client, msg *Message)) {
+func (s *Server) OnMessage(callback func(c *Conn, msg *Message)) {
 	s.onMessage = callback
 }
 
 // OnClose close callbacks on a connection, it will be called before closing
-func (s *Server) OnClose(callback func(c *Client, err error)) {
+func (s *Server) OnClose(callback func(c *Conn, err error)) {
 	s.onClose = callback
 }
 
-// Client defines parameters for accept an client
-type Client struct {
+// Conn defines parameters for accept an client
+type Conn struct {
 	srv      *Server
 	conn     net.Conn
 	clientIP net.Addr
@@ -113,7 +113,7 @@ type Client struct {
 }
 
 // process client connection
-func (c *Client) process(ctx context.Context) {
+func (c *Conn) process(ctx context.Context) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer func() {
 		cancel()
@@ -138,7 +138,7 @@ func (c *Client) process(ctx context.Context) {
 }
 
 // readLoop read goroutine
-func (c *Client) readLoop(ctx context.Context) {
+func (c *Conn) readLoop(ctx context.Context) {
 	for {
 		select {
 		case <-c.srv.exitCh:
@@ -158,7 +158,7 @@ func (c *Client) readLoop(ctx context.Context) {
 }
 
 // writeLoop write goroutine
-func (c *Client) writeLoop(ctx context.Context) {
+func (c *Conn) writeLoop(ctx context.Context) {
 	for {
 		select {
 		case <-c.srv.exitCh:
@@ -179,7 +179,7 @@ func (c *Client) writeLoop(ctx context.Context) {
 }
 
 // write Message to client connection
-func (c *Client) writeMessage(msg *Message) error {
+func (c *Conn) writeMessage(msg *Message) error {
 	m, err := c.protocol.Pack(msg)
 	if err != nil {
 		return err
@@ -188,7 +188,7 @@ func (c *Client) writeMessage(msg *Message) error {
 }
 
 // writeBytes send bytes message to client connection
-func (c *Client) writeBytes(b []byte) error {
+func (c *Conn) writeBytes(b []byte) error {
 	_, err := c.conn.Write(b)
 	if err != nil {
 		c.conn.Close()
@@ -198,36 +198,36 @@ func (c *Client) writeBytes(b []byte) error {
 }
 
 // GetRawConn get the raw net.Conn from the client connection
-func (c *Client) GetRawConn() net.Conn {
+func (c *Conn) GetRawConn() net.Conn {
 	return c.conn
 }
 
 // SetExtraMap set the extra data
-func (c *Client) SetExtraMap(k string, v interface{}) {
+func (c *Conn) SetExtraMap(k string, v interface{}) {
 	c.Lock()
 	defer c.Unlock()
 	c.extraMap[k] = v
 }
 
 // GetExtraMap get the extra data
-func (c *Client) GetExtraMap(k string) interface{} {
+func (c *Conn) GetExtraMap(k string) interface{} {
 	c.RLock()
 	defer c.RUnlock()
 	return c.extraMap[k]
 }
 
 // GetClientIP get client IP
-func (c *Client) GetClientIP() net.Addr {
+func (c *Conn) GetClientIP() net.Addr {
 	return c.clientIP
 }
 
 // SendMessage send message into channel
-func (c *Client) SendMessage(msg *Message) {
+func (c *Conn) SendMessage(msg *Message) {
 	c.sendCh <- msg
 }
 
 // SendBytes send bytes
-func (c *Client) SendBytes(cmd CMD, b []byte) {
+func (c *Conn) SendBytes(cmd CMD, b []byte) {
 	msg := NewMessage(cmd, b)
 	c.SendMessage(msg)
 }
