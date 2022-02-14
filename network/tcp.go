@@ -13,6 +13,7 @@ type Server struct {
 	addr      string
 	opt       *Options
 	exitCh    chan struct{}
+	sessions  *sync.Map
 	onConnect func(c *Conn)
 	onMessage func(c *Conn, msg *Message)
 	onClose   func(c *Conn, err error)
@@ -23,6 +24,7 @@ func NewServer(addr string, opts ...Option) *Server {
 	serv := &Server{
 		addr:      addr,
 		exitCh:    make(chan struct{}),
+		sessions:  &sync.Map{},
 		onConnect: func(c *Conn) {},
 		onMessage: func(c *Conn, msg *Message) {},
 		onClose:   func(c *Conn, err error) {},
@@ -72,7 +74,7 @@ func (s *Server) Start() {
 			errDone:  make(chan error),
 			extraMap: map[string]interface{}{},
 		}
-		go c.process(ctx)
+		go c.process(ctx, s)
 	}
 }
 
@@ -113,11 +115,14 @@ type Conn struct {
 }
 
 // process client connection
-func (c *Conn) process(ctx context.Context) {
+func (c *Conn) process(ctx context.Context, s *Server) {
+	sess := NewSession(c)
+	s.sessions.Store(sess.GetSessionID(), sess)
 	ctx, cancel := context.WithCancel(ctx)
 	defer func() {
 		cancel()
 		c.conn.Close()
+		s.sessions.Delete(sess.GetSessionID())
 	}()
 
 	go c.readLoop(ctx)
