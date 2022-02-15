@@ -17,16 +17,16 @@ func main() {
 	l.SetFormatter(&logrus.JSONFormatter{})
 	s := network.NewServer("0.0.0.0:1235", network.WithHeartbeat(5*time.Second), network.WithLogger(l))
 
-	s.OnConnect(func(c *network.Client) {
+	s.OnConnect(func(c *network.Conn) {
 		l.Println("connected by: %v\n", c.GetClientIP())
 		go input(c)
 	})
 
-	s.OnMessage(func(c *network.Client, msg *network.Message) {
+	s.OnMessage(func(c *network.Conn, msg *network.Message) {
 		fmt.Println(msg)
 	})
 
-	s.OnClose(func(c *network.Client, err error) {
+	s.OnClose(func(c *network.Conn, err error) {
 		l.Printf("closed by[%v]: %v\n", c.GetClientIP(), err)
 		ch := make(chan struct{}, 1)
 		ch <- struct{}{}
@@ -36,7 +36,7 @@ func main() {
 	s.Start()
 }
 
-func input(c *network.Client) {
+func input(c *network.Conn) {
 	for {
 		ch := c.GetExtraMap(c.GetClientIP().String())
 		if ch != nil {

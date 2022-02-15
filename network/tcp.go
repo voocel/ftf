@@ -74,7 +74,7 @@ func (s *Server) Start() {
 			errDone:  make(chan error),
 			extraMap: map[string]interface{}{},
 		}
-		go c.process(ctx, s)
+		go c.process(ctx)
 	}
 }
 
@@ -115,14 +115,14 @@ type Conn struct {
 }
 
 // process client connection
-func (c *Conn) process(ctx context.Context, s *Server) {
+func (c *Conn) process(ctx context.Context) {
 	sess := NewSession(c)
-	s.sessions.Store(sess.GetSessionID(), sess)
+	c.srv.sessions.Store(sess.GetSessionID(), sess)
 	ctx, cancel := context.WithCancel(ctx)
 	defer func() {
 		cancel()
 		c.conn.Close()
-		s.sessions.Delete(sess.GetSessionID())
+		c.srv.sessions.Delete(sess.GetSessionID())
 	}()
 
 	go c.readLoop(ctx)
