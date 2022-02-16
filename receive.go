@@ -24,11 +24,11 @@ func init() {
 
 func receive(ctx *cli.Context) (err error) {
 	s := network.NewServer("0.0.0.0:1234", network.WithLogger(flog))
-	s.OnConnect(func(c *network.Client) {
+	s.OnConnect(func(c *network.Conn) {
 		flog.Infof("connected by: %v\n", c.GetClientIP())
 	})
 
-	s.OnMessage(func(c *network.Client, msg *network.Message) {
+	s.OnMessage(func(c *network.Conn, msg *network.Message) {
 		if msg.GetCmd() == network.Ack {
 			c.SendBytes(network.Ack, []byte("ok"))
 			c.SetExtraMap("filename", string(msg.GetData()))
@@ -37,7 +37,7 @@ func receive(ctx *cli.Context) (err error) {
 		saveFile(c, msg)
 	})
 
-	s.OnClose(func(c *network.Client, err error) {
+	s.OnClose(func(c *network.Conn, err error) {
 		flog.Infof("closed by[%v]: %v\n", c.GetClientIP(), err)
 	})
 
@@ -45,7 +45,7 @@ func receive(ctx *cli.Context) (err error) {
 	return
 }
 
-func saveFile(c *network.Client, msg *network.Message) {
+func saveFile(c *network.Conn, msg *network.Message) {
 	fileName := c.GetExtraMap("filename").(string)
 	if fileExists(fileName) {
 		suffix := filepath.Ext(fileName)
