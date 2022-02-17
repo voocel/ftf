@@ -236,3 +236,21 @@ func (c *Conn) SendBytes(cmd CMD, b []byte) {
 	msg := NewMessage(cmd, b)
 	c.SendMessage(msg)
 }
+
+// SendSingle send message to single
+func (s *Conn) SendSingle(sid string, msg *Message) {
+	v, ok := s.srv.sessions.Load(sid)
+	if ok {
+		sess := v.(Session)
+		sess.GetConn().SendMessage(msg)
+	}
+}
+
+// SendAll send message to all
+func (s *Conn) SendAll(msg *Message) {
+	s.srv.sessions.Range(func(key, value interface{}) bool {
+		sess := value.(Session)
+		sess.GetConn().SendMessage(msg)
+		return true
+	})
+}
