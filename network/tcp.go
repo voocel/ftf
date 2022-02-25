@@ -81,6 +81,11 @@ func (s *Server) Start() {
 // Stop Close server
 func (s *Server) Stop() {
 	close(s.exitCh)
+	s.sessions.Range(func(key, value interface{}) bool {
+		sess := value.(*Session)
+		sess.GetConn().Close()
+		return true
+	})
 }
 
 // OnConnect connect callbacks on a connection
@@ -241,7 +246,7 @@ func (c *Conn) SendBytes(cmd CMD, b []byte) {
 func (c *Conn) SendSingle(sid string, msg *Message) {
 	v, ok := c.srv.sessions.Load(sid)
 	if ok {
-		sess := v.(Session)
+		sess := v.(*Session)
 		sess.GetConn().SendMessage(msg)
 	}
 }
@@ -249,8 +254,13 @@ func (c *Conn) SendSingle(sid string, msg *Message) {
 // SendAll send message to all
 func (c *Conn) SendAll(msg *Message) {
 	c.srv.sessions.Range(func(key, value interface{}) bool {
-		sess := value.(Session)
+		sess := value.(*Session)
 		sess.GetConn().SendMessage(msg)
 		return true
 	})
+}
+
+// Close the client connection
+func (c *Conn) Close() {
+	c.conn.Close()
 }
