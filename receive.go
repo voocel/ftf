@@ -3,11 +3,13 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/urfave/cli/v2"
@@ -66,6 +68,25 @@ func saveFile(c *network.Conn, msg *network.Message) {
 	w := bufio.NewWriter(file)
 	io.Copy(w, bytes.NewReader(msg.GetData()))
 	w.Flush()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	for {
+		select {
+		case <-ctx.Done():
+			// todo canceled the download
+			return
+		default:
+			_, err := io.CopyN(file, bytes.NewReader(msg.GetData()), 4096)
+			if err != nil {
+				if err == io.EOF {
+					return
+				} else {
+					flog.Fatal(err)
+				}
+			}
+		}
+	}
 }
 
 func checkIllegal(cmdName string) (err bool) {
