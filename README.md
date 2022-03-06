@@ -16,5 +16,10 @@ go build .
 ./ftf receive
 ```
 
+## 🔥 Feature
+* [x] send
+* [x] receive
+* [ ] progressbar
+
 ## ⚠️ License
 [Apache License v2.0](https://github.com/voocel/ftf/blob/main/LICENSE)
