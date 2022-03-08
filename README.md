@@ -16,7 +16,7 @@ go build .
 ./ftf receive
 ```
 
-## 🔥 Feature
+## 🔥 Features
 * [x] send
 * [x] receive
 * [ ] progressbar

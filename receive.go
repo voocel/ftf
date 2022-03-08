@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"fmt"
@@ -65,9 +64,9 @@ func saveFile(c *network.Conn, msg *network.Message) {
 	}
 	defer file.Close()
 
-	w := bufio.NewWriter(file)
-	io.Copy(w, bytes.NewReader(msg.GetData()))
-	w.Flush()
+	//w := bufio.NewWriter(file)
+	//io.Copy(w, bytes.NewReader(msg.GetData()))
+	//w.Flush()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
