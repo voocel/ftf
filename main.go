@@ -48,3 +48,11 @@ func baseCmd(c *cli.Context) (err error) {
 	}
 	return
 }
+
+func runApp(c *cli.Context) (err error) {
+	opts := startOpts{}
+	opts.addr = c.String("addr")
+	opts.path = c.String("path")
+
+	return err
+}
