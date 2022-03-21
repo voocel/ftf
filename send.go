@@ -2,13 +2,10 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net"
 	"os"
-	"strings"
 
 	"github.com/urfave/cli/v2"
 	"github.com/voocel/ftf/network"
@@ -23,76 +20,22 @@ type Send struct {
 	paths    []string
 	conn     net.Conn
 	logger   *log.Logger
+	folder   bool
 	protocol network.Protocol
 }
 
-func send(ctx *cli.Context) (err error) {
-	var sender = &Send{
-		addr:     defaultAddr,
+func NewSend(addr string, paths []string) *Send {
+	return &Send{
+		addr:     addr,
+		paths:    paths,
 		protocol: network.NewDefaultProtocol(),
 	}
-
-	if ctx.String("ip") != defaultAddr {
-		sender.addr, err = inputAddr()
-		if err != nil {
-			return
-		}
-	}
-	sender.paths, err = inputFilePath()
-	if err != nil {
-		return
-	}
-
-	sender.conn, err = net.Dial("tcp", sender.addr)
-	if err != nil {
-		sender.logf("net dial err: %v", err)
-		return
-	}
-	defer sender.conn.Close()
-
-	ok, err := sender.ack()
-	if err == nil && ok {
-		for _, path := range sender.paths {
-			sender.sendFile(path)
-		}
-	}
-	return
 }
 
-func inputAddr() (addr string, err error) {
-	inputReader := bufio.NewReader(os.Stdin)
-	fmt.Fprintf(os.Stdout, "Please enter the destination address\n\n(default: %s):\n", defaultAddr)
-	addr, err = inputReader.ReadString('\n')
-	if err != nil {
-		return "", fmt.Errorf("input params error: %v", err)
+func sender(ctx *cli.Context) (err error) {
+	if err := runApp(ctx); err != nil {
+		return cli.Exit(err, 1)
 	}
-	addr = strings.TrimSpace(addr)
-	if len(addr) == 0 {
-		addr = defaultAddr
-	}
-	return
-}
-
-func inputFilePath() (path []string, err error) {
-	inputReader := bufio.NewReader(os.Stdin)
-	fmt.Fprintf(os.Stdout, "Please enter the file path to transfer(eg: "+"./test.txt"+"): \n")
-	p, err := inputReader.ReadString('\n')
-	if err != nil {
-		err = fmt.Errorf("input params error: %v", err)
-		return
-	}
-
-	p = strings.TrimSuffix(p, "\n")
-	if p == "" {
-		var f []byte
-		f, err = ioutil.ReadFile("./ftf.conf")
-		if err != nil {
-			return
-		}
-		paths := strings.Split(string(f), ",")
-		return paths, nil
-	}
-	path = []string{p}
 	return
 }
 

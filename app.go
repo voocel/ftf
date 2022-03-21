@@ -1,15 +1,31 @@
 package main
 
 import (
+	"errors"
 	"io"
+	"io/ioutil"
+	"net"
 	"os"
+	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
 )
 
+const (
+	Sender     = "send"
+	Receiver   = "receive"
+	BackSelect = ".."
+	FileConfig = "file config"
+)
+
+var ErrBackSelect = errors.New("go back")
+
 type app struct {
-	opts *startOpts
-	w    io.Writer
+	opts       *startOpts
+	w          io.Writer
+	hasService bool
+	isSender   bool
+	isReceiver bool
 }
 
 type startOpts struct {
@@ -31,20 +47,84 @@ func newApp(opts *startOpts) *app {
 	return a
 }
 
-func (a *app) Start() error {
-	for {
-		_, err := a.selectAddr()
+func (a *app) Start() (err error) {
+	if !a.hasService {
+		err := a.selectService()
 		if err != nil {
 			return err
 		}
 	}
+
+	if a.isSender {
+		err = a.sendStart()
+	}
+
+	if a.isReceiver {
+		err = a.receiveStart()
+	}
+	return err
 }
 
-func (a *app) selectAddr() (addr string, err error) {
+func (a *app) receiveStart() error {
+	r := NewReceive("0.0.0.0:1234")
+	r.receive()
+	return nil
+}
+
+func (a *app) sendStart() error {
+	for {
+		addr, err := a.selectAddr()
+		if err != nil {
+			return err
+		}
+
+		for {
+			paths, err := a.selectFilepath()
+			if err != nil {
+				if err == ErrBackSelect {
+					break
+				}
+				return err
+			}
+			s := NewSend(addr, paths)
+			conn, err := net.Dial("tcp", s.addr)
+			if err != nil {
+				s.logf("net dial err: %v", err)
+				return err
+			}
+			s.conn = conn
+
+			ok, err := s.ack()
+			if err == nil && ok {
+				for _, path := range s.paths {
+					s.sendFile(path)
+				}
+			}
+		}
+	}
+}
+
+func (a *app) selectService() (err error) {
 	var target string
-	addr = a.opts.addr
+	err = survey.AskOne(&survey.Select{
+		Message: "Choose a service:",
+		Options: []string{Sender, Receiver},
+	}, &target, survey.WithValidator(survey.Required), surveyIcons())
+	if err != nil {
+		return err
+	}
+	if target == Sender {
+		a.isSender = true
+	} else if target == Receiver {
+		a.isReceiver = true
+	}
+	return
+}
+
+func (a *app) selectAddr() (target string, err error) {
 	err = survey.AskOne(&survey.Input{
-		Message:  "Choose an address:",
+		Message: "Input a receiver address:",
+		Help:    "127.0.0.1:1234",
 		Suggest: func(toComplete string) []string {
 			return []string{defaultAddr}
 		},
@@ -53,6 +133,35 @@ func (a *app) selectAddr() (addr string, err error) {
 		return "", err
 	}
 	return
+}
+
+func (a *app) selectFilepath() (paths []string, err error) {
+	var target string
+	err = survey.AskOne(&survey.Input{
+		Message: "Input a file path to send",
+		Help:    "You can enter the file path and batch write the file path to the configuration file './ftf.conf' separated by commas",
+		Suggest: func(toComplete string) []string {
+			return []string{BackSelect, FileConfig, "./test.txt"}
+		},
+	}, &target, survey.WithValidator(survey.Required), surveyIcons())
+	if err != nil {
+		return nil, err
+	}
+
+	if target == FileConfig {
+		var f []byte
+		f, err = ioutil.ReadFile("./ftf.conf")
+		if err != nil {
+			return
+		}
+		paths := strings.Split(string(f), ",")
+		return paths, nil
+	}
+
+	if target == BackSelect {
+		return nil, ErrBackSelect
+	}
+	return []string{target}, nil
 }
 
 func surveyIcons() survey.AskOpt {

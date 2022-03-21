@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -17,14 +18,33 @@ import (
 
 var flog network.Logger
 
+type Receive struct {
+	addr     string
+	logger   *log.Logger
+	protocol network.Protocol
+}
+
 func init() {
 	l := logrus.New()
 	l.SetLevel(logrus.DebugLevel)
 	flog = l
 }
 
-func receive(ctx *cli.Context) (err error) {
-	s := network.NewServer("0.0.0.0:1234", network.WithLogger(flog))
+func receiver(ctx *cli.Context) (err error) {
+	r := NewReceive("0.0.0.0:1234")
+	r.receive()
+	return
+}
+
+func NewReceive(addr string) *Receive {
+	return &Receive{
+		addr:     addr,
+		protocol: network.NewDefaultProtocol(),
+	}
+}
+
+func (r *Receive) receive() {
+	s := network.NewServer(r.addr, network.WithLogger(flog))
 	s.OnConnect(func(c *network.Conn) {
 		flog.Infof("connected by: %v\n", c.GetClientIP())
 	})
@@ -43,7 +63,6 @@ func receive(ctx *cli.Context) (err error) {
 	})
 
 	s.Start()
-	return
 }
 
 func saveFile(c *network.Conn, msg *network.Message) {
@@ -51,7 +70,7 @@ func saveFile(c *network.Conn, msg *network.Message) {
 	if fileExists(fileName) {
 		suffix := filepath.Ext(fileName)
 		prefix := strings.TrimSuffix(fileName, suffix)
-		fileName = fmt.Sprintf("%s(FTF)%s", prefix, suffix)
+		fileName = fmt.Sprintf("%s_ftf%s", prefix, suffix)
 	}
 	if strings.Contains(fileName, "..") {
 		return
@@ -97,4 +116,18 @@ func checkIllegal(cmdName string) (err bool) {
 		return true
 	}
 	return
+}
+
+func (r *Receive) log(v ...interface{}) {
+	if r.logger == nil {
+		r.logger = log.New(os.Stderr, "【FTF】", log.LstdFlags)
+	}
+	r.logger.Print(v...)
+}
+
+func (r *Receive) logf(format string, v ...interface{}) {
+	if r.logger == nil {
+		r.logger = log.New(os.Stderr, "【FTF】", log.LstdFlags)
+	}
+	r.logger.Printf(format, v...)
 }
