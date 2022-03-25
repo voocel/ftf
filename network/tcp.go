@@ -51,6 +51,8 @@ func (s *Server) Start() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	go s.Heartbeat()
+
 	for {
 		select {
 		case <-s.exitCh:
@@ -75,6 +77,27 @@ func (s *Server) Start() {
 			extraMap: map[string]interface{}{},
 		}
 		go c.process(ctx)
+	}
+}
+
+// Heartbeat heartbeat detection
+func (s *Server) Heartbeat() {
+	tick := time.NewTicker(time.Second)
+	for {
+		select {
+		case <-tick.C:
+			s.sessions.Range(func(key, value interface{}) bool {
+				sess, ok := value.(*Session)
+				if !ok {
+					return true
+				}
+				if time.Now().Unix()-sess.lastTime > 5 {
+					sess.GetConn().Close()
+					s.sessions.Delete(key)
+				}
+				return true
+			})
+		}
 	}
 }
 

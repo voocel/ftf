@@ -2,6 +2,7 @@ package network
 
 import (
 	"github.com/google/uuid"
+	"time"
 )
 
 // Session struct
@@ -9,6 +10,7 @@ type Session struct {
 	sid      string
 	uid      string
 	conn     *Conn
+	lastTime int64
 	extraMap map[string]interface{}
 }
 
@@ -19,6 +21,7 @@ func NewSession(conn *Conn) *Session {
 		sid:      id.String(),
 		uid:      "",
 		conn:     conn,
+		lastTime: time.Now().Unix(),
 		extraMap: make(map[string]interface{}),
 	}
 
@@ -48,6 +51,11 @@ func (s *Session) GetConn() *Conn {
 // SetConn set a Conn to session
 func (s *Session) SetConn(conn *Conn) {
 	s.conn = conn
+}
+
+// UpdateTime update the message last time
+func (s *Session) UpdateTime() {
+	s.lastTime = time.Now().Unix()
 }
 
 // GetExtraMap get the extra data
