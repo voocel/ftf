@@ -117,17 +117,3 @@ func checkIllegal(cmdName string) (err bool) {
 	}
 	return
 }
-
-func (r *Receive) log(v ...interface{}) {
-	if r.logger == nil {
-		r.logger = log.New(os.Stderr, "【FTF】", log.LstdFlags)
-	}
-	r.logger.Print(v...)
-}
-
-func (r *Receive) logf(format string, v ...interface{}) {
-	if r.logger == nil {
-		r.logger = log.New(os.Stderr, "【FTF】", log.LstdFlags)
-	}
-	r.logger.Printf(format, v...)
-}

@@ -8,6 +8,11 @@ import (
 	"time"
 )
 
+const (
+	// IdleTime If no data is sent to the server within 30 seconds, the connection will be forcibly closed
+	IdleTime = 10
+)
+
 // Server defines parameters for running an TCP network
 type Server struct {
 	addr      string
@@ -91,7 +96,7 @@ func (s *Server) Heartbeat() {
 				if !ok {
 					return true
 				}
-				if time.Now().Unix()-sess.lastTime > 5 {
+				if time.Now().Unix()-sess.lastTime > IdleTime {
 					sess.GetConn().Close()
 					s.sessions.Delete(key)
 				}
@@ -132,6 +137,7 @@ type Conn struct {
 	conn     net.Conn
 	clientIP net.Addr
 	protocol Protocol
+	sessId   string
 	timer    *time.Timer
 	timeout  time.Duration
 	interval time.Duration
@@ -145,7 +151,8 @@ type Conn struct {
 // process client connection
 func (c *Conn) process(ctx context.Context) {
 	sess := NewSession(c)
-	c.srv.sessions.Store(sess.GetSessionID(), sess)
+	c.sessId = sess.GetSessionID()
+	c.srv.sessions.Store(c.sessId, sess)
 	ctx, cancel := context.WithCancel(ctx)
 	defer func() {
 		cancel()
@@ -186,6 +193,13 @@ func (c *Conn) readLoop(ctx context.Context) {
 				return
 			}
 			c.msgCh <- msg
+
+			v, ok := c.srv.sessions.Load(c.sessId)
+			if !ok {
+				return
+			}
+			sess := v.(*Session)
+			sess.UpdateTime()
 		}
 	}
 }
@@ -203,7 +217,7 @@ func (c *Conn) writeLoop(ctx context.Context) {
 				Flog.Errorf("send message err: %v", err)
 			}
 		case <-c.timer.C:
-			c.SendBytes(Heartbeat, []byte("ping"))
+			//c.SendBytes(Heartbeat, []byte("ping"))
 			if c.interval > 0 {
 				c.timer.Reset(c.interval)
 			}

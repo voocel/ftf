@@ -76,7 +76,7 @@ func (d *DefaultLogger) Errorf(format string, v ...interface{}) {
 
 // Fatal logs a message at level Fatal on the standard logger then the process will exit with status set to 1
 func (d *DefaultLogger) Fatal(v ...interface{}) {
-	d.rawLogger.Fatal("[FATAL] %s", v)
+	d.rawLogger.Fatalf("[FATAL] %v", v)
 }
 
 // Fatalf logs a message at level Fatal on the standard logger then the process will exit with status set to 1
@@ -86,7 +86,7 @@ func (d *DefaultLogger) Fatalf(format string, v ...interface{}) {
 
 // Panic logs a message at level Panic on the standard logger
 func (d *DefaultLogger) Panic(v ...interface{}) {
-	d.rawLogger.Panic("[PANIC] %s", v)
+	d.rawLogger.Panicf("[PANIC] %v", v)
 }
 
 // Panicf logs a message at level Panic on the standard logger

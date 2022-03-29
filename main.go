@@ -17,7 +17,7 @@ func main() {
 	app.Usage = "The high-performance file transfer for Golang"
 	app.Version = Version
 	app.EnableBashCompletion = true
-	//app.CustomAppHelpTemplate = Summary()
+	app.CustomAppHelpTemplate = Summary()
 
 	app.Action = baseCmd
 	app.Flags = []cli.Flag{}

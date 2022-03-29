@@ -77,6 +77,13 @@ func (a *app) sendStart() error {
 		if err != nil {
 			return err
 		}
+		s := NewSend(addr)
+		conn, err := net.Dial("tcp", s.addr)
+		if err != nil {
+			s.logf("net dial err: %v", err)
+			return err
+		}
+		s.conn = conn
 
 		for {
 			paths, err := a.selectFilepath()
@@ -86,13 +93,7 @@ func (a *app) sendStart() error {
 				}
 				return err
 			}
-			s := NewSend(addr, paths)
-			conn, err := net.Dial("tcp", s.addr)
-			if err != nil {
-				s.logf("net dial err: %v", err)
-				return err
-			}
-			s.conn = conn
+			s.addPath(paths...)
 
 			ok, err := s.ack()
 			if err == nil && ok {

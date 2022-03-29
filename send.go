@@ -24,10 +24,9 @@ type Send struct {
 	protocol network.Protocol
 }
 
-func NewSend(addr string, paths []string) *Send {
+func NewSend(addr string) *Send {
 	return &Send{
 		addr:     addr,
-		paths:    paths,
 		protocol: network.NewDefaultProtocol(),
 	}
 }
@@ -103,6 +102,10 @@ func (s *Send) sendFile(path string) {
 		}
 		s.conn.Write(b)
 	}
+}
+
+func (s *Send) addPath(path ...string) {
+	s.paths = append(s.paths, path...)
 }
 
 func (s *Send) log(v ...interface{}) {
