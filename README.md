@@ -16,6 +16,12 @@ go build .
 ./ftf receive
 ```
 
+## ⚙️ Install
+install a release from the command-line
+```
+curl https://getftf.voocel.com | bash
+```
+
 ## 🔥 Features
 * [x] send
 * [x] receive
