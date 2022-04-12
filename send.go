@@ -22,11 +22,13 @@ type Send struct {
 	logger   *log.Logger
 	folder   bool
 	protocol network.Protocol
+	stats    *Stats
 }
 
 func NewSend(addr string) *Send {
 	return &Send{
 		addr:     addr,
+		stats:    NewStats(),
 		protocol: network.NewDefaultProtocol(),
 	}
 }
@@ -77,13 +79,18 @@ func (s *Send) sendFile(path string) {
 		s.logf("os open err: %v", err)
 		return
 	}
-	defer file.Close()
+	s.stats.Start()
+	defer func() {
+		file.Close()
+		s.stats.Pause()
+	}()
 
 	buf := make([]byte, DefaultRecvBufSize)
 	for {
 		n, err := file.Read(buf)
 		if err != nil {
 			if err == io.EOF {
+				s.stats.Stop()
 				s.log("files send success")
 			} else {
 				s.logf("file read err: %v", err)
@@ -101,6 +108,7 @@ func (s *Send) sendFile(path string) {
 			return
 		}
 		s.conn.Write(b)
+		s.stats.AddBytes(uint64(n))
 	}
 }
 
