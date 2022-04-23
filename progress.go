@@ -3,87 +3,140 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"html/template"
+	"io"
+	"math"
 	"os"
-	"sort"
+	"strconv"
 	"strings"
 )
 
-// var pic = █
+// Bar is a progress bar
+type Bar struct {
+	StartDelimiter string // StartDelimiter for the bar ("|")
+	EndDelimiter   string // EndDelimiter for the bar ("|")
+	Filled         string // Filled section representation ("█ ■")
+	Empty          string // Empty section representation ("░ □")
+	Width          int    // Width of the bar
 
-type Event struct {
-	fileName string
-	uploaded int64
-	total    int64
+	text    string
+	rate    string
+	current int64
+	total   int64
+	tmpl    *template.Template
 }
 
-type Progress struct {
-	Event    chan Event
-	progress map[string]string
-	rendered bool
-}
-
-func (p *Progress) Start(done chan struct{}) {
-	for e := range p.Event {
-		if _, ok := p.progress[e.fileName]; ok {
-			p.progress[e.fileName] = getProgress(e.uploaded, e.total)
-			if p.rendered {
-				p.clear()
-			}
-			p.render()
-		}
+// NewBar return a new bar with the given total
+func NewBar(total int64) *Bar {
+	b := &Bar{
+		StartDelimiter: "|",
+		EndDelimiter:   "|",
+		Filled:         "█",
+		Empty:          "░",
+		Width:          50,
+		total:          total,
 	}
-	done <- struct{}{}
+	b.template(`{{.Percent | printf "%3.0f"}}% {{.Bar}} {{.Total}} {{.Rate}} {{.Text}}`)
+
+	return b
 }
 
-func (p *Progress) render() {
-	if !p.rendered {
-		p.rendered = true
+// template for rendering. This method will panic if the template fails to parse
+func (b *Bar) template(s string) {
+	t, err := template.New("").Parse(s)
+	if err != nil {
+		panic(err)
 	}
-	keys := make([]string, 0)
-	for fileName := range p.progress {
-		keys = append(keys, fileName)
-	}
-	sort.Strings(keys)
-
-	var progress bytes.Buffer
-	for _, fileName := range keys {
-		if pro, ok := p.progress[fileName]; ok {
-			progress.WriteString(fmt.Sprintf("%s:\n%s\n", fileName, pro))
-		}
-	}
-
-	fmt.Fprintf(os.Stdout, progress.String())
+	b.tmpl = t
 }
 
-func NewProgress(files []string) *Progress {
-	pMap := make(map[string]string)
-	for _, file := range files {
-		pMap[file] = strings.Repeat("□", 100)
-	}
-	p := &Progress{Event: make(chan Event, len(files)), progress: pMap}
-	return p
+// Text set the text value
+func (b *Bar) Text(s string) {
+	b.text = s
 }
 
-func getProgress(uploaded, total int64) string {
-	var progress bytes.Buffer
-	done := strings.Repeat("■", int(float64(uploaded)/float64(total)*100))
-	todo := strings.Repeat("□", 100-int(float64(uploaded)/float64(total)*100))
-	progress.WriteString(fmt.Sprintf("%s%s", done, todo))
-	return progress.String()
+// Rate set the speed value
+func (b *Bar) Rate(s string) {
+	b.rate = s
 }
 
-func (p *Progress) clear() {
-	for i := 0; i < len(p.progress)*2; i++ {
-		cursorUp(1)
-		eraseInLine(2)
+// Add the specified amount to the progressbar
+func (b *Bar) Add(n int64) {
+	b.current += n
+	if b.current > b.total {
+		panic("cannot be greater than the total")
 	}
 }
 
-func eraseInLine(mode int) {
-	fmt.Printf("\x1b[%dK", mode)
+// string return the progress bar
+func (b *Bar) string() string {
+	var buf bytes.Buffer
+	data := struct {
+		Percent float64
+		Bar     string
+		Text    string
+		Rate    string
+		Total   string
+	}{
+		Percent: b.percent(),
+		Bar:     b.bar(),
+		Text:    b.text,
+		Rate:    b.rate,
+		Total:   b.formatTotal(),
+	}
+
+	if err := b.tmpl.Execute(&buf, data); err != nil {
+		panic(err)
+	}
+
+	return buf.String()
 }
 
-// cursorUp Move the cursor n cells to up.
-func cursorUp(n int) {
-	fmt.Printf("\x1b[%dA", n)
+// percent return the percentage
+func (b *Bar) percent() float64 {
+	return (float64(b.current) / float64(b.total)) * 100
+}
+
+// formatTotal return the format total
+func (b *Bar) formatTotal() string {
+	return b.bytesToSize(b.current) + "/" + b.bytesToSize(b.total)
+}
+
+// Bar return the progress bar string
+func (b *Bar) bar() string {
+	p := float64(b.current) / float64(b.total)
+	filled := math.Ceil(float64(b.Width) * p)
+	empty := math.Floor(float64(b.Width) - filled)
+	s := b.StartDelimiter
+	s += strings.Repeat(b.Filled, int(filled))
+	s += strings.Repeat(b.Empty, int(empty))
+	s += b.EndDelimiter
+	return s
+}
+
+// Render write the progress bar to io.Writer
+func (b *Bar) Render(w io.Writer) int64 {
+	s := fmt.Sprintf("\r   %s ", b.string())
+	io.WriteString(w, s)
+	return int64(len(s))
+}
+
+// Write implement io.Writer
+func (b *Bar) Write(bytes []byte) (n int, err error) {
+	n = len(bytes)
+	b.Add(int64(n))
+	b.Render(os.Stdout)
+	return
+}
+
+// bytesToSize format bytes to string
+func (b *Bar) bytesToSize(bytes int64) string {
+	var k = 1024
+	var sizes = []string{"Bytes", "KB", "MB", "GB", "TB"}
+	if bytes == 0 {
+		return "0 Bytes"
+	}
+	i := math.Floor(math.Log(float64(bytes)) / math.Log(float64(k)))
+	r := float64(bytes) / math.Pow(float64(k), i)
+	return strconv.FormatFloat(r, 'f', 2, 64) + sizes[int(i)]
 }

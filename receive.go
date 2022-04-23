@@ -23,6 +23,7 @@ type Receive struct {
 	logger   *log.Logger
 	protocol network.Protocol
 	stats    *Stats
+	bar      *Bar
 }
 
 func init() {
@@ -93,6 +94,7 @@ func (r *Receive) saveFile(c *network.Conn, msg *network.Message) {
 	//io.Copy(w, bytes.NewReader(msg.GetData()))
 	//w.Flush()
 
+	r.bar = NewBar(int64(msg.GetSize()))
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	for {
@@ -102,7 +104,7 @@ func (r *Receive) saveFile(c *network.Conn, msg *network.Message) {
 			r.stats.Stop()
 			return
 		default:
-			written, err := io.CopyN(file, bytes.NewReader(msg.GetData()), 4096)
+			written, err := io.CopyN(io.MultiWriter(file, r.bar), bytes.NewReader(msg.GetData()), 4096)
 			if err != nil {
 				if err == io.EOF {
 					return

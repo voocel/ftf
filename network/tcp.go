@@ -99,6 +99,9 @@ func (s *Server) Heartbeat() {
 				if time.Now().Unix()-sess.lastTime > IdleTime {
 					sess.GetConn().Close()
 					s.sessions.Delete(key)
+					close(sess.GetConn().sendCh)
+					close(sess.GetConn().msgCh)
+					close(sess.GetConn().errDone)
 				}
 				return true
 			})

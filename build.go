@@ -11,7 +11,7 @@ var (
 	Time    = "N/A"
 )
 
-const template =
+const templates =
 `NAME
   ftf                 %s
 
@@ -30,7 +30,7 @@ COMMANDS
 `
 
 func Summary() string {
-	return fmt.Sprintf(template,
+	return fmt.Sprintf(templates,
 		"a fast filetransfer for Golang",
 		runtime.GOARCH,
 		runtime.GOOS,
