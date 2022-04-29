@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Bar is a progress bar
@@ -21,9 +22,11 @@ type Bar struct {
 
 	text    string
 	rate    string
+	prev    int64
 	current int64
 	total   int64
 	tmpl    *template.Template
+	done    chan struct{}
 }
 
 // NewBar return a new bar with the given total
@@ -33,12 +36,30 @@ func NewBar(total int64) *Bar {
 		EndDelimiter:   "|",
 		Filled:         "█",
 		Empty:          "░",
-		Width:          50,
+		Width:          60,
 		total:          total,
+		done:           make(chan struct{}),
 	}
+	go b.listenRate()
 	b.template(`{{.Percent | printf "%3.0f"}}% {{.Bar}} {{.Total}} {{.Rate}} {{.Text}}`)
 
 	return b
+}
+
+// listenRate start listen the speed
+func (b *Bar) listenRate() {
+	tick := time.NewTicker(time.Second / 10)
+	defer tick.Stop()
+	for {
+		select {
+		case <-tick.C:
+			r := b.current - b.prev
+			b.rate = "[" + b.bytesToSize(r*10) + "/s]"
+			b.prev = b.current
+		case <-b.done:
+			return
+		}
+	}
 }
 
 // template for rendering. This method will panic if the template fails to parse
@@ -55,11 +76,6 @@ func (b *Bar) Text(s string) {
 	b.text = s
 }
 
-// Rate set the speed value
-func (b *Bar) Rate(s string) {
-	b.rate = s
-}
-
 // Add the specified amount to the progressbar
 func (b *Bar) Add(n int64) {
 	b.current += n
@@ -71,6 +87,9 @@ func (b *Bar) Add(n int64) {
 // string return the progress bar
 func (b *Bar) string() string {
 	var buf bytes.Buffer
+	if b.rate == "" {
+		b.rate = "[" + b.bytesToSize(0) + "/s]"
+	}
 	data := struct {
 		Percent float64
 		Bar     string
@@ -116,7 +135,7 @@ func (b *Bar) bar() string {
 
 // Render write the progress bar to io.Writer
 func (b *Bar) Render(w io.Writer) int64 {
-	s := fmt.Sprintf("\r   %s ", b.string())
+	s := fmt.Sprintf("\x1bM\r   %s ", b.string())
 	io.WriteString(w, s)
 	return int64(len(s))
 }
@@ -139,4 +158,9 @@ func (b *Bar) bytesToSize(bytes int64) string {
 	i := math.Floor(math.Log(float64(bytes)) / math.Log(float64(k)))
 	r := float64(bytes) / math.Pow(float64(k), i)
 	return strconv.FormatFloat(r, 'f', 2, 64) + sizes[int(i)]
+}
+
+// Close the rate listen
+func (b *Bar) Close() {
+	close(b.done)
 }

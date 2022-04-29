@@ -95,6 +95,7 @@ func (r *Receive) saveFile(c *network.Conn, msg *network.Message) {
 	//w.Flush()
 
 	r.bar = NewBar(int64(msg.GetSize()))
+	defer r.bar.Close()
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	for {
