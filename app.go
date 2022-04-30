@@ -1,14 +1,18 @@
 package main
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net"
 	"os"
 	"strings"
 
 	"github.com/AlecAivazis/survey/v2"
+	"github.com/peterh/liner"
 )
 
 const (
@@ -163,6 +167,60 @@ func (a *app) selectFilepath() (paths []string, err error) {
 		return nil, ErrBackSelect
 	}
 	return []string{target}, nil
+}
+
+func (a *app) predict() {
+	line := liner.NewLiner()
+	defer line.Close()
+
+	var filePath = make([]string, 0)
+	line.SetCtrlCAborts(true)
+
+	f, err := os.Open(HistoryFile)
+	if err == nil {
+		defer func() {
+			line.WriteHistory(f)
+			f.Close()
+		}()
+
+		buf := new(bytes.Buffer)
+		line.ReadHistory(f)
+		line.WriteHistory(buf)
+		history := strings.Split(buf.String(), "\n")
+		filterDuplicate(history)
+		filePath = append(filePath, history...)
+	}
+
+	line.SetCompleter(func(line string) (c []string) {
+		for _, n := range filePath {
+			if strings.HasPrefix(n, strings.ToLower(line)) {
+				c = append(c, n)
+			}
+		}
+		return
+	})
+
+	prompt := "input file path> "
+	for {
+		if target, err := line.Prompt(prompt); err == nil {
+			if target == "" {
+				continue
+			}
+			if target == "quit" || target == "exit" {
+				fmt.Println("bye")
+				break
+			}
+			target = strings.TrimSpace(target)
+			log.Print("input: ", target)
+			line.AppendHistory(target)
+		} else if err == liner.ErrPromptAborted {
+			fmt.Println("bye")
+			break
+		} else {
+			log.Print("Error reading line: ", err)
+			break
+		}
+	}
 }
 
 func surveyIcons() survey.AskOpt {

@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 
 	"github.com/urfave/cli/v2"
 )
@@ -11,6 +12,8 @@ import (
 const (
 	defaultAddr = "127.0.0.1:1234"
 )
+
+var HistoryFile string
 
 func main() {
 	app := cli.NewApp()
@@ -35,6 +38,17 @@ func main() {
 			Usage:  "receive network",
 			Action: receiver,
 		},
+	}
+	app.Before = func(context *cli.Context) (err error) {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return
+		}
+		HistoryFile = filepath.Join(homeDir, ".ftf")
+		if err = os.MkdirAll(HistoryFile, 0755); err != nil {
+			return err
+		}
+		return
 	}
 
 	err := app.Run(os.Args)

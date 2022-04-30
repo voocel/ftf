@@ -1,6 +1,9 @@
 package main
 
-import "os"
+import (
+	"os"
+	"strings"
+)
 
 func fileExists(path string) bool {
 	_, err := os.Stat(path)
@@ -23,4 +26,18 @@ func isDir(path string) bool {
 
 func isFile(path string) bool {
 	return !isDir(path)
+}
+
+func filterDuplicate(src []string) []string {
+	i := 0
+	m := make(map[string]struct{})
+	for _, item := range src {
+		if _, ok := m[item]; !ok && item != "" {
+			item = strings.TrimSpace(item)
+			m[item] = struct{}{}
+			src[i] = item
+			i++
+		}
+	}
+	return src[:i]
 }

@@ -101,7 +101,7 @@ func (s *Server) Heartbeat() {
 					s.sessions.Delete(key)
 					close(sess.GetConn().sendCh)
 					close(sess.GetConn().msgCh)
-					close(sess.GetConn().errDone)
+					//close(sess.GetConn().errDone)
 				}
 				return true
 			})
