@@ -25,7 +25,10 @@ curl https://getftf.voocel.com | bash
 ## 🔥 Features
 * [x] send
 * [x] receive
-* [ ] progressbar
+* [x] progressbar
 
 ## ⚠️ License
-[Apache License v2.0](https://github.com/voocel/ftf/blob/main/LICENSE)
+
+Copyright © 2016–2022
+
+Licensed under [Apache License 2.0](https://github.com/voocel/ftf/blob/main/LICENSE)
