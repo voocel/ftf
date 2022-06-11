@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -207,14 +206,14 @@ func (a *app) predict() {
 				continue
 			}
 			if target == "quit" || target == "exit" {
-				fmt.Println("bye")
+				RedText("bye")
 				break
 			}
 			target = strings.TrimSpace(target)
 			log.Print("input: ", target)
 			line.AppendHistory(target)
 		} else if err == liner.ErrPromptAborted {
-			fmt.Println("bye")
+			RedText("bye")
 			break
 		} else {
 			log.Print("Error reading line: ", err)
