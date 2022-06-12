@@ -3,6 +3,8 @@
     <p align="center">The high-performance file transfer for Golang</p>
 </p>
 
+**English** | [中文](./README.zh-CN.md)
+
 ## 💡 Requirements
 Go version: 1.9.x or later
 
