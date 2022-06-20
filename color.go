@@ -63,3 +63,11 @@ func GrayText(s string) string {
 func WhiteText(s string) string {
 	return SetColor(s, 0, 0, white)
 }
+
+func RedTextf(format, s string) string {
+	return RedText(fmt.Sprintf(format, s))
+}
+
+func CyanTextf(format, s string) string {
+	return CyanText(fmt.Sprintf(format, s))
+}

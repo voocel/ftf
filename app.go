@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io"
 	"io/ioutil"
-	"log"
 	"net"
 	"os"
 	"strings"
@@ -210,13 +209,13 @@ func (a *app) predict() {
 				break
 			}
 			target = strings.TrimSpace(target)
-			log.Print("input: ", target)
+			CyanTextf("input: %v", target)
 			line.AppendHistory(target)
 		} else if err == liner.ErrPromptAborted {
 			RedText("bye")
 			break
 		} else {
-			log.Print("Error reading line: ", err)
+			RedTextf("Error reading line: %s", err.Error())
 			break
 		}
 	}
