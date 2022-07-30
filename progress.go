@@ -19,7 +19,8 @@ type Bar struct {
 	Filled         string // Filled section representation ("█ ■")
 	Empty          string // Empty section representation ("░ □")
 	Width          int    // Width of the bar
-	Prefix         string // Prefix of the bar
+	Name           string // Name of the bar
+	Status         string // Status of the bar
 
 	text    string
 	rate    string
@@ -38,12 +39,13 @@ func NewBar(total int64) *Bar {
 		Filled:         "█",
 		Empty:          "░",
 		Width:          50,
-		Prefix:         "Downloading",
+		Status:         "Downloading",
 		total:          total,
 		done:           make(chan struct{}),
 	}
 	go b.listenRate()
-	b.template(`{{.Prefix}} {{.Percent | printf "%3.0f"}}% {{.Bar}} {{.Total}} {{.Rate}} {{.Text}}`)
+	fmt.Print("\r\n")
+	b.template(`{{.Status}} {{.Name}} {{.Percent | printf "%3.0f"}}% {{.Bar}} {{.Total}} {{.Rate}} {{.Text}}`)
 
 	return b
 }
@@ -57,8 +59,10 @@ func (b *Bar) listenRate() {
 		case <-tick.C:
 			r := b.current - b.prev
 			b.rate = "[" + b.bytesToSize(r*10) + "/s]"
+			b.rate = SetColor(b.rate, 0, 0, yellow)
 			b.prev = b.current
 		case <-b.done:
+			fmt.Print("\r\n")
 			return
 		}
 	}
@@ -73,9 +77,44 @@ func (b *Bar) template(s string) {
 	b.tmpl = t
 }
 
-// Text set the text value
-func (b *Bar) Text(s string) {
+// SetText set the text value
+func (b *Bar) SetText(s string, color ...string) {
 	b.text = s
+	if len(color) > 0 {
+		b.text = SetColor(b.text, 0, 0, colorToCode(color[0]))
+	}
+}
+
+// SetStatus set the status value
+func (b *Bar) SetStatus(s string, color ...string) {
+	b.Status = s
+	if len(color) > 0 {
+		b.Status = SetColor(b.Status, 0, 0, colorToCode(color[0]))
+	}
+}
+
+// SetName set the name value
+func (b *Bar) SetName(s string, color ...string) {
+	b.Name = s
+	if len(color) > 0 {
+		b.Name = SetColor(b.Name, 0, 0, colorToCode(color[0]))
+	}
+}
+
+// SetFilled set the filled value
+func (b *Bar) SetFilled(s string, color ...string) {
+	b.Filled = s
+	if len(color) > 0 {
+		b.Filled = SetColor(b.Filled, 0, 0, colorToCode(color[0]))
+	}
+}
+
+// SetEmpty set the empty value
+func (b *Bar) SetEmpty(s string, color ...string) {
+	b.Empty = s
+	if len(color) > 0 {
+		b.Empty = SetColor(b.Empty, 0, 0, colorToCode(color[0]))
+	}
 }
 
 // Add the specified amount to the progressbar
@@ -85,7 +124,8 @@ func (b *Bar) Add(n int64) {
 		panic("cannot be greater than the total")
 	}
 	if b.current == b.total {
-		b.Prefix = "success"
+		b.Status = "Success"
+		b.Close()
 	}
 }
 
@@ -96,14 +136,16 @@ func (b *Bar) string() string {
 		b.rate = "[" + b.bytesToSize(0) + "/s]"
 	}
 	data := struct {
-		Prefix  string
+		Status  string
+		Name    string
 		Percent float64
 		Bar     string
 		Text    string
 		Rate    string
 		Total   string
 	}{
-		Prefix:  b.Prefix,
+		Status:  b.Status,
+		Name:    b.Name,
 		Percent: b.percent(),
 		Bar:     b.bar(),
 		Text:    b.text,
@@ -111,6 +153,7 @@ func (b *Bar) string() string {
 		Total:   b.formatTotal(),
 	}
 
+	data.Total = SetColor(b.formatTotal(), 0, 0, green)
 	if err := b.tmpl.Execute(&buf, data); err != nil {
 		panic(err)
 	}
@@ -142,8 +185,16 @@ func (b *Bar) bar() string {
 
 // Render write the progress bar to io.Writer
 func (b *Bar) Render(w io.Writer) int64 {
-	s := fmt.Sprintf("\x1bM\r %s ", b.string())
+	s := fmt.Sprintf("\x1bM\r %s", b.string())
+	//fmt.Print("\033[2K\033[0G")
+	fmt.Print("\x1B7")     // save the cursor position
+	fmt.Print("\x1B[2K")   // erase the entire line
+	fmt.Print("\x1B[0J")   // erase from cursor to end of screen
+	fmt.Print("\x1B[?47h") // save screen
+	fmt.Print("\x1B[1J")   // erase from cursor to beginning of screen
+	fmt.Print("\x1B[?47l") // restore screen
 	io.WriteString(w, s)
+	fmt.Print("\x1B8") // restore the cursor position util new size is calculated
 	return int64(len(s))
 }
 

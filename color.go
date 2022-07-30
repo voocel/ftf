@@ -17,57 +17,121 @@ const (
 	cyan
 	gray
 
-	white = 97
+	white   = 97
+	unknown = 999
 )
 
-func SetColor(msg string, conf, bg, text int) string {
-	return fmt.Sprintf("%c[%d;%d;%dm%s%c[0m", 0x1B, conf, bg, text, msg, 0x1B)
+var colorMap = map[int]string{
+	bold:    "bold",
+	black:   "black",
+	red:     "red",
+	green:   "green",
+	yellow:  "yellow",
+	blue:    "blue",
+	pink:    "pink",
+	cyan:    "cyan",
+	gray:    "gray",
+	white:   "white",
+	unknown: "unknown",
 }
 
-func BlackText(s string) string {
-	return SetColor(s, 0, 0, black)
+func SetColor(text string, conf, bg, color int) string {
+	return fmt.Sprintf("%c[%d;%d;%dm%s%c[0m", 0x1B, conf, bg, color, text, 0x1B)
 }
 
-func BoldText(s string) string {
+func Bold(s string) string {
 	return SetColor(s, 0, 0, bold)
 }
 
-func RedText(s string) string {
+func Black(s string) string {
+	return SetColor(s, 0, 0, black)
+}
+
+func Red(s string) string {
 	return SetColor(s, 0, 0, red)
 }
 
-func GreenText(s string) string {
+func Green(s string) string {
 	return SetColor(s, 0, 0, green)
 }
 
-func YellowText(s string) string {
+func Yellow(s string) string {
 	return SetColor(s, 0, 0, yellow)
 }
 
-func BlueText(s string) string {
+func Blue(s string) string {
 	return SetColor(s, 0, 0, blue)
 }
 
-func PinkText(s string) string {
+func Pink(s string) string {
 	return SetColor(s, 0, 0, pink)
 }
 
-func CyanText(s string) string {
+func Cyan(s string) string {
 	return SetColor(s, 0, 0, cyan)
 }
 
-func GrayText(s string) string {
+func Gray(s string) string {
 	return SetColor(s, 0, 0, gray)
 }
 
-func WhiteText(s string) string {
+func White(s string) string {
 	return SetColor(s, 0, 0, white)
 }
 
-func RedTextf(format, s string) string {
-	return RedText(fmt.Sprintf(format, s))
+func PrintBold(s string) {
+	println(Bold(s))
 }
 
-func CyanTextf(format, s string) string {
-	return CyanText(fmt.Sprintf(format, s))
+func PrintBlack(s string) {
+	println(Black(s))
+}
+
+func PrintRed(s string) {
+	println(Red(s))
+}
+
+func PrintGreen(s string) {
+	println(Green(s))
+}
+
+func PrintYellow(s string) {
+	println(Yellow(s))
+}
+
+func PrintBlue(s string) {
+	println(Blue(s))
+}
+
+func PrintPink(s string) {
+	println(Pink(s))
+}
+
+func PrintCyan(s string) {
+	println(Cyan(s))
+}
+
+func PrintGray(s string) {
+	println(Gray(s))
+}
+
+func PrintWhite(s string) {
+	println(White(s))
+}
+
+func codeReason(code int) string {
+	v, ok := colorMap[code]
+	if !ok {
+		v = colorMap[unknown]
+	}
+	return v
+}
+
+func colorToCode(s string) int {
+	for k := range colorMap {
+		if colorMap[k] == s {
+			return k
+		}
+	}
+	return unknown
 }
