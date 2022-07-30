@@ -205,17 +205,17 @@ func (a *app) predict() {
 				continue
 			}
 			if target == "quit" || target == "exit" {
-				RedText("bye")
+				PrintRed("bye")
 				break
 			}
 			target = strings.TrimSpace(target)
-			CyanTextf("input: %v", target)
+			PrintCyanf("input: %v", target)
 			line.AppendHistory(target)
 		} else if err == liner.ErrPromptAborted {
-			RedText("bye")
+			PrintRed("bye")
 			break
 		} else {
-			RedTextf("Error reading line: %s", err.Error())
+			PrintRedf("Error reading line: %s", err.Error())
 			break
 		}
 	}
