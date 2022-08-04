@@ -6,6 +6,8 @@ import (
 	"log"
 	"net"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/urfave/cli/v2"
 	"github.com/voocel/ftf/network"
@@ -73,7 +75,41 @@ func (s *Send) ack() (ok bool, err error) {
 	return
 }
 
-func (s *Send) sendFile(path string) {
+func (s *Send) sendFile(root string) {
+	var files []string
+	err := filepath.Walk(root,
+		func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				s.log(err)
+				return nil
+			}
+			if shouldIgnore(path) || info.IsDir() {
+				return nil
+			}
+			files = append(files, path)
+			return nil
+		})
+	if err != nil {
+		s.logf("send[%s] err: %v", root, err)
+		return
+	}
+	for _, file := range files {
+		s.send(file)
+	}
+}
+
+var defaultIgnorePatterns = []string{".git", "."}
+
+func shouldIgnore(path string) bool {
+	for _, prefix := range defaultIgnorePatterns {
+		if strings.HasPrefix(path, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Send) send(path string) {
 	file, err := os.Open(path)
 	if err != nil {
 		s.logf("os open err: %v", err)
