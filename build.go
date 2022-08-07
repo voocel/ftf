@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	Version = "v1.0.0"
+	Version = "v0.1.0"
 	ID      = "N/A"
 	Time    = "N/A"
 )

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net"
@@ -209,13 +210,13 @@ func (a *app) predict() {
 				break
 			}
 			target = strings.TrimSpace(target)
-			PrintCyanf("input: %v", target)
+			PrintCyan(fmt.Sprintf("input: %v", target))
 			line.AppendHistory(target)
 		} else if err == liner.ErrPromptAborted {
 			PrintRed("bye")
 			break
 		} else {
-			PrintRedf("Error reading line: %s", err.Error())
+			PrintRed(fmt.Sprintf("Error reading line: %s", err.Error()))
 			break
 		}
 	}

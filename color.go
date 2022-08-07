@@ -5,6 +5,14 @@ import "fmt"
 const (
 	reset = iota
 	bold
+	fuzzy
+	italic
+	underscore
+	blink
+	fastBlink
+	reverse
+	concealed
+	strikethrough
 )
 
 const (
@@ -83,79 +91,40 @@ func PrintBold(s string) {
 	println(Bold(s))
 }
 
-func PrintBoldf(format, s string) {
-	PrintBold(fmt.Sprintf(format, s))
-}
-
 func PrintBlack(s string) {
 	println(Black(s))
-}
-
-func PrintBlackf(format, s string) {
-	PrintBlack(fmt.Sprintf(format, s))
 }
 
 func PrintRed(s string) {
 	println(Red(s))
 }
 
-func PrintRedf(format, s string) {
-	PrintRed(fmt.Sprintf(format, s))
-}
-
 func PrintGreen(s string) {
 	println(Green(s))
-}
-
-func PrintGreenf(format, s string) {
-	PrintGreen(fmt.Sprintf(format, s))
 }
 
 func PrintYellow(s string) {
 	println(Yellow(s))
 }
 
-func PrintYellowf(format, s string) {
-	PrintYellow(fmt.Sprintf(format, s))
-}
-
 func PrintBlue(s string) {
 	println(Blue(s))
-}
-
-func PrintBluef(format, s string) {
-	PrintBlue(fmt.Sprintf(format, s))
 }
 
 func PrintPink(s string) {
 	println(Pink(s))
 }
 
-func PrintPinkf(format, s string) {
-	PrintPink(fmt.Sprintf(format, s))
-}
-
 func PrintCyan(s string) {
 	println(Cyan(s))
-}
-func PrintCyanf(format, s string) {
-	PrintCyan(fmt.Sprintf(format, s))
 }
 
 func PrintGray(s string) {
 	println(Gray(s))
 }
 
-func PrintGrayf(format, s string) {
-	PrintGray(fmt.Sprintf(format, s))
-}
-
 func PrintWhite(s string) {
 	println(White(s))
-}
-
-func PrintWhitef(format, s string) {
-	PrintWhite(fmt.Sprintf(format, s))
 }
 
 func codeReason(code int) string {

@@ -22,7 +22,6 @@ type Receive struct {
 	addr     string
 	logger   *log.Logger
 	protocol network.Protocol
-	stats    *Stats
 	bar      *Bar
 }
 
@@ -41,7 +40,6 @@ func receiver(ctx *cli.Context) (err error) {
 func NewReceive(addr string) *Receive {
 	return &Receive{
 		addr:     addr,
-		stats:    NewStats(),
 		protocol: network.NewDefaultProtocol(),
 	}
 }
@@ -84,11 +82,7 @@ func (r *Receive) saveFile(c *network.Conn, msg *network.Message) {
 		flog.Errorf("create file[%s] err: %v", fileName, err)
 		return
 	}
-	r.stats.Start()
-	defer func() {
-		file.Close()
-		r.stats.Stop()
-	}()
+	defer file.Close()
 
 	//w := bufio.NewWriter(file)
 	//io.Copy(w, bytes.NewReader(msg.GetData()))
@@ -102,20 +96,15 @@ func (r *Receive) saveFile(c *network.Conn, msg *network.Message) {
 		select {
 		case <-ctx.Done():
 			// todo canceled the download
-			r.stats.Stop()
 			return
 		default:
-			written, err := io.CopyN(io.MultiWriter(file, r.bar), bytes.NewReader(msg.GetData()), 4096)
+			_, err := io.CopyN(io.MultiWriter(file, r.bar), bytes.NewReader(msg.GetData()), 4096)
 			if err != nil {
 				if err == io.EOF {
 					return
 				} else {
 					flog.Fatal(err)
 				}
-			} else {
-				currentSpeed := r.stats.Speed()
-				fmt.Printf("Transferring at %.2f MB/s\r", currentSpeed)
-				r.stats.AddBytes(uint64(written))
 			}
 		}
 	}
