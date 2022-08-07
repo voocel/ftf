@@ -3,14 +3,26 @@ package network
 import (
 	"bufio"
 	"context"
+	"errors"
+	"io"
 	"net"
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 )
 
+var (
+	// ErrServerClosed occurs when heartbeat detection the connection is not active
+	ErrServerClosed = errors.New("server closed idle connection")
+	// ErrClientClosed occurs when client close the connection
+	ErrClientClosed = errors.New("client closed")
+)
+
 const (
-	// IdleTime If no data is sent to the server within 30 seconds, the connection will be forcibly closed
-	IdleTime = 10
+	// IdleTime If no data is sent to the server within 60 seconds, the connection will be forcibly closed
+	IdleTime = 60
 )
 
 // Server defines parameters for running an TCP network
@@ -57,7 +69,20 @@ func (s *Server) Start() {
 	defer cancel()
 
 	go s.Heartbeat()
+	go s.Accept(ctx, listener)
 
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGINT)
+	for {
+		select {
+		case <-ch:
+			s.Stop()
+			return
+		}
+	}
+}
+
+func (s *Server) Accept(ctx context.Context, listener net.Listener) {
 	for {
 		select {
 		case <-s.exitCh:
@@ -78,7 +103,7 @@ func (s *Server) Start() {
 			protocol: NewDefaultProtocol(),
 			msgCh:    make(chan *Message, 1024),
 			sendCh:   make(chan *Message, 1024),
-			errDone:  make(chan error),
+			errDone:  make(chan error, 1),
 			extraMap: map[string]interface{}{},
 		}
 		go c.process(ctx)
@@ -99,9 +124,6 @@ func (s *Server) Heartbeat() {
 				if time.Now().Unix()-sess.lastTime > IdleTime {
 					sess.GetConn().Close()
 					s.sessions.Delete(key)
-					close(sess.GetConn().sendCh)
-					close(sess.GetConn().msgCh)
-					//close(sess.GetConn().errDone)
 				}
 				return true
 			})
@@ -192,6 +214,14 @@ func (c *Conn) readLoop(ctx context.Context) {
 			reader := bufio.NewReader(c.conn)
 			msg, err := c.protocol.Unpack(reader)
 			if err != nil {
+				if err == io.EOF {
+					err = ErrClientClosed
+				} else {
+					netOpError, ok := err.(*net.OpError)
+					if ok && netOpError.Err.Error() == "use of closed network connection" {
+						err = ErrServerClosed
+					}
+				}
 				c.errDone <- err
 				return
 			}
@@ -303,4 +333,5 @@ func (c *Conn) SendAll(msg *Message) {
 // Close the client connection
 func (c *Conn) Close() {
 	c.conn.Close()
+	c.errDone <- ErrServerClosed
 }
