@@ -28,6 +28,7 @@ curl https://getftf.voocel.com | bash
 * [x] send
 * [x] receive
 * [x] progressbar
+* [x] pretty terminal
 
 ## ⚠️ License
 
